@@ -1,4 +1,5 @@
 const express = require("express");
+const { createProxyMiddleware } = require("http-proxy-middleware");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db");
@@ -9,9 +10,19 @@ dotenv.config();
 // 连接数据库
 connectDB();
 
-// 创建Express应用
 const app = express();
 
+app.use(
+  "/openai",
+  createProxyMiddleware({
+    target: "https://api.openai.com",
+    changeOrigin: true,
+    pathRewrite: { "^/openai": "" },
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+  })
+);
 // 中间件
 app.use(cors());
 app.use(express.json());
@@ -19,11 +30,6 @@ app.use(express.json());
 // 路由
 app.use("/api/ask", require("./routes/ask"));
 app.use("/api/history", require("./routes/history"));
-
-// 健康检查路由
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
-});
 
 // 端口设置
 const PORT = process.env.PORT || 3000;
